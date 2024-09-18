@@ -1,0 +1,73 @@
+#define TRIG_PIN 7
+#define ECHO_PIN 8
+#define TEMP_PIN A0
+#define BUZZER_PIN 4
+#define LED_PIN 5
+#define BUTTON_PIN 3
+
+long duration;
+float distance;
+int temperature;
+bool alarmActive = false;
+bool buttonPressed = false;
+unsigned long lastButtonPress = 0;
+const unsigned long debounceDelay = 50;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  digitalWrite(BUZZER_PIN, LOW);
+  digitalWrite(LED_PIN, LOW);
+}
+
+void loop() {
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  
+  duration = pulseIn(ECHO_PIN, HIGH);
+  distance = (duration * 0.034) / 2;
+  
+  temperature = analogRead(TEMP_PIN);
+  temperature = map(temperature, 0, 1023, 0, 100);
+  
+  Serial.print("Distância: ");
+  Serial.print(distance);
+  Serial.print(" cm | Temperatura: ");
+  Serial.print(temperature);
+  Serial.println(" °C");
+  
+  if (distance < 20) {
+    if (!alarmActive) {
+      alarmActive = true;
+      Serial.print("Alarme ativado! Temperatura: ");
+      Serial.print(temperature);
+      Serial.println(" °C");
+    }
+    digitalWrite(LED_PIN, HIGH);
+    tone(BUZZER_PIN, 1000);
+  } else {
+    alarmActive = false;
+    digitalWrite(LED_PIN, LOW);
+    noTone(BUZZER_PIN);
+  }
+  
+  int buttonState = digitalRead(BUTTON_PIN);
+  if (buttonState == LOW) {
+    if (!buttonPressed && (millis() - lastButtonPress > debounceDelay)) {
+      buttonPressed = true;
+      lastButtonPress = millis();
+      noTone(BUZZER_PIN);
+    }
+  } else {
+    buttonPressed = false;
+  }
+
+  delay(100);
+}
